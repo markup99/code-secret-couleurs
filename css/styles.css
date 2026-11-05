@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #29263b;
+  background: #f6f4ed;
+  line-height: 1.6;
+  --accent: #42348b;
+  --border: #dedbe7;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 960px; margin: auto; padding: 48px 24px 24px; }
+.page-header { margin-bottom: 32px; }
+.eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #625a78; }
+h1 { font-size: clamp(2.5rem, 7vw, 4rem); line-height: 1.08; letter-spacing: -.04em; margin: 12px 0 20px; }
+h1 span { color: var(--accent); }
+h2 { font-size: 1.2rem; margin: 0; }
+p { margin: 10px 0; }
+.rules, .game, .history-section { padding: 28px; border-radius: 20px; margin-bottom: 20px; }
+.rules { background: #eeebf6; }
+.rules > ul:not(.palette) { padding-left: 22px; }
+.palette { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 0; margin: 20px 0 0; list-style: none; }
+.palette li { display: flex; align-items: center; gap: 8px; }
+.swatch { display: inline-block; width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: #f4f2f8; border: 1px solid #8c849c; }
+[data-color="rouge"] { background: #cf354b; }
+[data-color="bleu"] { background: #326bc6; }
+[data-color="vert"] { background: #258257; }
+[data-color="jaune"] { background: #f4cd41; }
+[data-color="orange"] { background: #e98b2d; }
+[data-color="violet"] { background: #8f50ba; }
+.game, .history-section { background: #fff; border: 1px solid var(--border); }
+.section-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+.counter { background: #eeebf6; color: var(--accent); border-radius: 99px; padding: 6px 14px; font-size: .85rem; font-weight: 700; margin: 0; }
+fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+legend { font-weight: 650; }
+#guess-help { color: #625a78; font-size: .9rem; }
+.positions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.position { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 10px; border: 1px solid var(--border); border-radius: 12px; font-size: .85rem; }
+.position .swatch { width: 38px; height: 38px; }
+select, button { font: inherit; min-height: 48px; }
+select { width: 100%; background: white; color: #29263b; border: 1px solid #8c849c; border-radius: 7px; padding: 6px; }
+button { border-radius: 8px; padding: 10px 20px; font-weight: 650; cursor: pointer; border: 1px solid var(--accent); }
+.primary { background: var(--accent); color: white; width: 100%; }
+.secondary { color: var(--accent); background: transparent; }
+button:hover:not(:disabled) { filter: brightness(.9); }
+button:disabled { opacity: .55; cursor: default; }
+:focus-visible { outline: 3px solid #2367c2; outline-offset: 4px; }
+select[aria-invalid="true"] { border: 2px solid #ab2340; }
+.message { margin: 20px 0; padding: 14px 16px; border-radius: 8px; background: #f4f2f8; }
+.message[data-kind="error"], .message[data-kind="lost"] { background: #fff0ed; color: #942841; }
+.message[data-kind="won"] { background: #e8f5ee; color: #1c6641; }
+.history { list-style: none; padding: 0; margin: 0; }
+.history > li { display: grid; grid-template-columns: 70px 1fr; gap: 8px 20px; padding: 20px 0; border-top: 1px solid var(--border); }
+.attempt-number { font-size: .85rem; align-self: center; }
+.guess-colors { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0; }
+.guess-colors li { display: flex; align-items: center; gap: 7px; font-size: .85rem; }
+.feedback { grid-column: 2; margin: 0; font-size: .85rem; color: #625a78; }
+footer { text-align: center; color: #625a78; font-size: .8rem; padding: 12px; }
+[hidden] { display: none; }
+@media (max-width: 600px) {
+  main { padding: 28px 16px 16px; }
+  .rules, .game, .history-section { padding: 20px 16px; }
+  .positions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .history > li { grid-template-columns: 1fr; gap: 12px; }
+  .feedback { grid-column: 1; }
+  .guess-colors li { flex-direction: column; gap: 4px; }
+  .secondary { width: 100%; }
+}

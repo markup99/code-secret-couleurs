@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#42348b">
+  <title>Code secret en couleurs</title>
+  <link rel="stylesheet" href="./css/styles.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <p class="eyebrow">Le jeu de déduction</p>
+      <h1>Code secret<br><span>en couleurs</span></h1>
+      <p>Quatre couleurs. Dix essais. À vous de percer le secret.</p>
+    </header>
+
+    <section class="rules" aria-labelledby="rules-title">
+      <h2 id="rules-title">Comment jouer ?</h2>
+      <p>Retrouvez les quatre couleurs dans le bon ordre. Une couleur peut apparaître plusieurs fois.</p>
+      <ul>
+        <li><strong>Bien placée :</strong> la couleur est à la bonne position.</li>
+        <li><strong>Mal placée :</strong> la couleur est présente ailleurs dans le secret.</li>
+      </ul>
+      <p>Chaque occurrence compte une seule fois. Les indices ne désignent pas de position précise.</p>
+      <ul id="palette" class="palette" aria-label="Les six couleurs disponibles"></ul>
+    </section>
+
+    <section class="game" aria-labelledby="game-title">
+      <div class="section-heading">
+        <h2 id="game-title">À vous de jouer</h2>
+        <p id="remaining" class="counter"></p>
+      </div>
+      <form id="guess-form">
+        <fieldset id="guess-fields" disabled aria-describedby="guess-help">
+          <legend>Votre proposition</legend>
+          <p id="guess-help">Choisissez une couleur pour chaque position, de gauche à droite.</p>
+          <div id="positions" class="positions"></div>
+          <button type="submit" class="primary">Valider la proposition</button>
+        </fieldset>
+      </form>
+      <p id="message" class="message" role="status" aria-live="polite" aria-atomic="true">Chargement de la partie…</p>
+      <button type="button" id="new-game" class="secondary" disabled>Nouvelle partie</button>
+      <noscript><p>Activez JavaScript pour jouer à Code secret en couleurs.</p></noscript>
+    </section>
+
+    <section class="history-section" aria-labelledby="history-title">
+      <div class="section-heading">
+        <h2 id="history-title">Vos tentatives</h2>
+        <span class="eyebrow">Du premier au dernier essai</span>
+      </div>
+      <p id="empty-history">Aucune proposition pour le moment. À vous de commencer !</p>
+      <ol id="history" class="history"></ol>
+    </section>
+    <footer>Observez les indices, affinez votre prochain coup.</footer>
+  </main>
+</body>
+</html>
