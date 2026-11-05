@@ -36,7 +36,7 @@ Depuis la racine du dépôt :
 python3 -m http.server 8000
 ```
 
-Ouvrir `http://localhost:8000` dans un navigateur moderne. Choisir les quatre couleurs puis valider ; les sélections restent disponibles pour affiner la proposition suivante. Les sélecteurs et boutons natifs fonctionnent au clavier (Tab, flèches, Entrée), à la souris et au toucher. « Nouvelle partie » efface la partie en cours et démarre un nouveau secret.
+Ouvrir `http://localhost:8000` dans un navigateur moderne. Choisir les quatre couleurs puis valider ; le compteur indique le nombre de positions remplies, y compris les couleurs répétées. Une proposition acceptée efface les sélections et remet le compteur à 0/4 ; une proposition refusée conserve les sélections. Les sélecteurs et boutons natifs fonctionnent au clavier (Tab, flèches, Entrée), à la souris et au toucher. « Nouvelle partie » efface la partie en cours et démarre un nouveau secret.
 
 Le site est statique, utilise des chemins relatifs et ne nécessite ni compilation ni service distant : il est prévu pour GitHub Pages. Les modules JavaScript nécessitent un serveur HTTP ; ne pas ouvrir directement `index.html` via `file://`.
 
@@ -140,3 +140,38 @@ Les neuf cas T01–T09 ont été rejoués via `window.codeSecretTest` dans le v�
 Un premier passage a détecté une régression du focus après un refus de formulaire : le sélecteur était encore désactivé au moment du focus. La correction réactive les commandes pendant le rendu, avant de rendre la main. Le test clavier passe dans l'exécution finale. Les contrôles de syntaxe JavaScript et `git diff --check` ont aussi réussi.
 
 **Non exécutés :** tests de cette nouvelle version depuis l'URL GitHub Pages publiée (aucune publication autorisée), outil de test enseignant, essais sur deux architectures, autres moteurs de navigateur et vérifications manuelles d'accessibilité/appareils listées ci-dessus. Les tests utilisent le véritable DOM et Chromium sur un serveur statique local sous `/code-secret-couleurs/` ; cela vérifie les chemins relatifs, pas une publication distante.
+
+## Petite amélioration : compteur des couleurs sélectionnées
+
+Travail du 5 novembre 2026 à partir de `main`, commit `2e04659f0c8f9c2b42c2a8b0a6bf61352423efa7`. Objectif : rendre visible le nombre de positions remplies, avec un changement limité et des résultats attendus comparés aux observations. Le support de l'atelier enseignant du 4 novembre n'est pas disponible ici ; aucune conformité à son contenu précis n'est revendiquée. Les PDF officiels ne sont pas présents dans cet espace ; les règles, le moteur et les signatures/données de l'API 0.2 restent inchangés.
+
+Le compteur apparaît au-dessus des quatre sélecteurs et utilise une région d'annonce `polite`. Il compte les positions remplies, même si une couleur est répétée. À la demande, une proposition acceptée efface désormais les sélections ; une proposition refusée les conserve. Ce changement de présentation ne modifie ni le score, ni les essais, ni l'historique.
+
+Résultats attendus définis dans les assertions avant exécution, puis réellement observés dans Chromium headless :
+
+| Action / situation | Résultat attendu | Résultat observé |
+| --- | --- | --- |
+| Chargement normal, état test non démarré ou démarrage d'une partie | `0/4 couleurs sélectionnées.` | Conforme, compteur visible |
+| Sélection d'une couleur | `1/4 couleurs sélectionnées.` | Conforme |
+| Deux puis trois positions remplies | `2/4`, puis `3/4` | Conforme |
+| Quatre positions remplies avec rouge répété quatre fois | `4/4` | Conforme : les occurrences sont comptées séparément |
+| Remplacement d'une couleur sans vider la position | Le compteur reste à `4/4` | Conforme |
+| Effacement successif des quatre positions | `3/4`, `2/4`, `1/4`, `0/4` | Conforme |
+| Validation d'une proposition incomplète à trois couleurs | `3/4`, aucun essai consommé | Conforme |
+| Proposition valide `[rouge, rouge, rouge, rouge]`, secret `[rouge, rouge, bleu, vert]` | Compteur `0/4`, sélecteurs/pions vides ; 1 essai, indices 2 / 0, état playing | Conforme, historique et état API synchronisés |
+| Refus API d'une proposition trop courte ou d'un démarrage invalide | Sélection et compteur `1/4` conservés ; aucun essai consommé | Conforme |
+| Proposition gagnante via l'API | `0/4` dès la résolution de la promesse ; état won | Conforme |
+| Nouvelle partie via bouton ou API, depuis une sélection remplie ; bouton après victoire | `0/4` | Conforme |
+| Sélection au clavier en mode normal | `1/4`, sans exposition de l'API | Conforme |
+| Largeurs 320, 390, 768 et 1280 pixels | Compteur visible et contenu dans l'écran, aucun débordement horizontal | Conforme |
+
+Commandes et résultats de cette modification, avec Node.js 24.19.0, Playwright 1.64.1 et Chromium 154.0.8037.57 :
+
+- `npm test` : **48 réussites, 0 échec, 0 ignoré** ; tests du moteur inchangés.
+- `CHROMIUM_PATH=/usr/bin/chromium npm run test:api` avant l'ajout des nouveaux tests : **58 réussites, 0 échec, 0 ignoré**, suite existante inchangée.
+- Même commande après ajout des quatre tests du compteur dans `tests/api.test.js` : **62 réussites, 0 échec, 0 ignoré**, dont les 58 tests existants. Cela couvre aussi les régressions de score, de cycle de vie, de clavier, de souris et de toucher émulé.
+- `node --check js/ui.js`, `node --check tests/api.test.js` et `git diff --check` : réussis.
+
+Fichiers modifiés : `index.html` (compteur visible), `js/ui.js` (décompte et remise à zéro), `tests/api.test.js` (quatre tests de comportement), `README.md` (instructions de jeu et preuves de vérification). Aucun changement de CSS, du moteur, de `js/app.js`, du contrat ou des dépendances.
+
+Non vérifiés pour ce compteur : lecteur d'écran réel et annonces vocales, Firefox/Safari, appareils physiques et outil enseignant. Aucun commit, publication ou fusion effectué pour cette modification ; elle reste à relire.
