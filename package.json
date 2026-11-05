@@ -1,0 +1,11 @@
+{
+  "name": "code-secret-couleurs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/engine.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
