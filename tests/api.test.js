@@ -114,6 +114,41 @@ const checkCount = async (expected) => {
   assert.equal(await counter.textContent(), `${expected}/4 couleurs sélectionnées.`);
 };
 
+test("selection counter: fresh module URLs bypass obsolete unversioned modules", async () => {
+  const obsoleteRequests = [];
+  // Model an old cached response at the previous module URLs. The new page
+  // must request different URLs, rather than execute either obsolete module.
+  await page.route((requestURL) => /\/js\/(app|ui)\.js$/.test(requestURL.pathname) && !requestURL.search, async (route) => {
+    obsoleteRequests.push(route.request().url());
+    await route.fulfill({ contentType: "text/javascript", body: 'throw new Error("Obsolete module loaded");' });
+  });
+  await page.goto(url);
+  await page.waitForFunction(() => !document.querySelector("#guess-fields").disabled, undefined, { timeout: 2000 });
+  assert.deepEqual(obsoleteRequests, []);
+  await checkCount(0);
+  // Reported combination: repeated jaune must count as two filled positions.
+  for (const [index, color] of [J, V, J, O].entries()) {
+    await page.locator("select").nth(index).selectOption(color);
+    await checkCount(index + 1);
+  }
+  await page.locator("select").first().selectOption(B);
+  await checkCount(4);
+  await page.locator("select").last().selectOption("");
+  await checkCount(3);
+  await page.locator("select").last().selectOption(O);
+  await checkCount(4);
+  await page.getByRole("button", { name: "Valider la proposition" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("#history > li").length === 1);
+  await checkCount(0);
+  assert.deepEqual(await page.locator("select").evaluateAll((items) => items.map((item) => item.value)), ["", "", "", ""]);
+  await page.locator("select").first().selectOption(J);
+  await checkCount(1);
+  await page.getByRole("button", { name: "Nouvelle partie" }).click();
+  await checkCount(0);
+  assert.equal(await page.locator("#history > li").count(), 0);
+  assert.equal(await page.evaluate(() => "codeSecretTest" in window), false);
+});
+
 test("selection counter: initial 0, filled positions 1/2/3/4, replacement and clearing", async () => {
   await checkCount(0);
   await start();
