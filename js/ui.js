@@ -4,6 +4,7 @@ export function createUI(game) {
   const form = document.querySelector("#guess-form");
   const fields = document.querySelector("#guess-fields");
   const positions = document.querySelector("#positions");
+  const selectionCount = document.querySelector("#selection-count");
   const restart = document.querySelector("#new-game");
   const message = document.querySelector("#message");
   const history = document.querySelector("#history");
@@ -11,6 +12,11 @@ export function createUI(game) {
   const emptyHistory = document.querySelector("#empty-history");
   const selects = [];
   let busy = false;
+
+  function updateSelectionCount() {
+    const count = selects.filter((select) => select.value !== "").length;
+    selectionCount.textContent = `${count}/${config.secretLength} couleurs sélectionnées.`;
+  }
 
   function swatch(color) {
     const dot = document.createElement("span");
@@ -39,10 +45,20 @@ export function createUI(game) {
     select.addEventListener("change", () => {
       dot.dataset.color = select.value;
       select.removeAttribute("aria-invalid");
+      updateSelectionCount();
     });
     label.append(caption, dot, select);
     positions.append(label);
     selects.push(select);
+  }
+  updateSelectionCount();
+
+  function clearSelection() {
+    form.reset();
+    for (const select of selects) {
+      select.removeAttribute("aria-invalid");
+      select.dispatchEvent(new Event("change"));
+    }
   }
 
   function render(state) {
@@ -92,11 +108,7 @@ export function createUI(game) {
     // Validate in the engine first. A rejected start must leave the DOM,
     // selections, focus and previous lastError completely untouched.
     const state = await game.startGame(options);
-    form.reset();
-    for (const select of selects) {
-      select.removeAttribute("aria-invalid");
-      select.dispatchEvent(new Event("change"));
-    }
+    clearSelection();
     render(state);
     selects[0].focus();
     return state;
@@ -104,6 +116,7 @@ export function createUI(game) {
 
   async function submitGuess(guess) {
     const state = await game.submitGuess(guess);
+    if (!state.lastError) clearSelection();
     render(state);
     return state;
   }

@@ -108,6 +108,104 @@ afterEach(async () => {
 const start = (secret = reds) => page.evaluate((secret) => window.callAPI("startGame", { secret }), secret);
 const guess = (value) => page.evaluate((value) => window.callAPI("submitGuess", value), value);
 
+const checkCount = async (expected) => {
+  const counter = page.locator("#selection-count");
+  assert.equal(await counter.isVisible(), true);
+  assert.equal(await counter.textContent(), `${expected}/4 couleurs sélectionnées.`);
+};
+
+test("selection counter: initial 0, filled positions 1/2/3/4, replacement and clearing", async () => {
+  await checkCount(0);
+  await start();
+  await checkCount(0);
+  // Expected: repeated colours fill separate positions, rather than one unique colour.
+  for (let index = 0; index < 4; index++) {
+    await page.locator("select").nth(index).selectOption(R);
+    await checkCount(index + 1);
+  }
+  await page.locator("select").first().selectOption(B);
+  await checkCount(4);
+  // Expected: clearing each position reduces the count, down to zero.
+  for (let index = 0; index < 4; index++) {
+    await page.locator("select").nth(index).selectOption("");
+    await checkCount(3 - index);
+  }
+});
+
+test("selection counter: incomplete guess preserves 3; valid mouse guess clears to 0", async () => {
+  await start([R, R, B, V]);
+  for (let index = 0; index < 3; index++) await page.locator("select").nth(index).selectOption(R);
+  await page.getByRole("button", { name: "Valider la proposition" }).click();
+  await page.waitForFunction(() => window.codeSecretTest.getState().lastError !== null && !document.querySelector("#guess-fields").disabled);
+  await checkCount(3);
+  assert.equal(await page.evaluate(() => window.codeSecretTest.getState().attempts), 0);
+  await page.locator("select").last().selectOption(R);
+  await checkCount(4);
+  await page.getByRole("button", { name: "Valider la proposition" }).click();
+  await page.waitForFunction(() => window.codeSecretTest.getState().attempts === 1 && !document.querySelector("#guess-fields").disabled);
+  await checkCount(0);
+  const state = await page.evaluate(() => window.checkUI(window.codeSecretTest.getState()));
+  assert.equal(state.status, "playing");
+  assert.deepEqual(state.lastResult, { wellPlaced: 2, misplaced: 0 });
+  assert.deepEqual(await page.locator("select").evaluateAll((items) => items.map((item) => item.value)), ["", "", "", ""]);
+  assert.deepEqual(await page.locator("#positions .swatch").evaluateAll((items) => items.map((item) => item.dataset.color)), ["", "", "", ""]);
+});
+
+test("selection counter: API refusals preserve selection; accepted guess and both restarts reset", async () => {
+  await start();
+  await page.locator("select").first().selectOption(Vi);
+  await checkCount(1);
+  await guess([R]); // Expected: invalid length consumes no attempt and preserves 1/4.
+  await checkCount(1);
+  assert.equal(await page.evaluate(() => window.codeSecretTest.getState().attempts), 0);
+  await page.evaluate(async () => {
+    try { await window.codeSecretTest.startGame(null); }
+    catch (error) { if (error.code === "invalid-options") return; throw error; }
+    throw new Error("Invalid start must reject");
+  });
+  await checkCount(1);
+  await start();
+  await checkCount(0);
+  await page.locator("select").first().selectOption(Vi);
+  await page.getByRole("button", { name: "Nouvelle partie" }).click();
+  await checkCount(0);
+  await start();
+  for (const select of await page.locator("select").all()) await select.selectOption(R);
+  // Expected: API resolution already exposes reset selectors/counter, even on victory.
+  assert.equal(await page.evaluate(async (proposal) => {
+    const state = await window.callAPI("submitGuess", proposal);
+    if (document.querySelector("#selection-count").textContent !== "0/4 couleurs sélectionnées.") {
+      throw new Error("Counter must be reset before the API promise resolves");
+    }
+    return state.status;
+  }, reds), "won");
+  await checkCount(0);
+  await page.getByRole("button", { name: "Nouvelle partie" }).click();
+  await checkCount(0);
+});
+
+test("selection counter: normal mode keyboard input, restart and narrow screens", async () => {
+  await page.goto(url);
+  await page.waitForFunction(() => !document.querySelector("#guess-fields").disabled);
+  await checkCount(0);
+  await page.locator("select").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Tab");
+  await checkCount(1);
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await checkCount(1);
+    const fits = await page.locator("#selection-count").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth;
+    });
+    assert.equal(fits, true, `counter and page fit at ${width}px`);
+  }
+  await page.getByRole("button", { name: "Nouvelle partie" }).click();
+  await checkCount(0);
+  assert.equal(await page.evaluate(() => "codeSecretTest" in window), false);
+});
+
 test("version, exact synchronous config/state, initial not-started UI and getter purity", async () => {
   const result = await page.evaluate(() => {
     const api = window.codeSecretTest;
