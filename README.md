@@ -175,3 +175,34 @@ Commandes et résultats de cette modification, avec Node.js 24.19.0, Playwright 
 Fichiers modifiés : `index.html` (compteur visible), `js/ui.js` (décompte et remise à zéro), `tests/api.test.js` (quatre tests de comportement), `README.md` (instructions de jeu et preuves de vérification). Aucun changement de CSS, du moteur, de `js/app.js`, du contrat ou des dépendances.
 
 Non vérifiés pour ce compteur : lecteur d'écran réel et annonces vocales, Firefox/Safari, appareils physiques et outil enseignant. Aucun commit, publication ou fusion effectué pour cette modification ; elle reste à relire.
+
+## Investigation du compteur bloqué sur le site publié
+
+Investigation du 5 novembre 2026 depuis le dernier `main` récupéré : `114f16b3e93c260e2e3e0d4bac9c40f029996961`. `README.md` et `AGENTS.md` ont été relus. Les PDF officiels ne sont pas disponibles dans cet espace ; aucune modification des règles ou du contrat 0.2 n'est effectuée.
+
+**Signalement réel de l'utilisateur :** sur GitHub Pages, les quatre positions affichent `[jaune, vert, jaune, orange]`, mais le compteur reste à `0/4 couleurs sélectionnées` ; le résultat attendu est `4/4`. Le navigateur, son cache et les réponses réseau de cette session ne sont pas disponibles ici. L'accès direct à `https://markup99.github.io/code-secret-couleurs/` n'a pas pu être vérifié : requête du module refusée avec HTTP 403 dans cet environnement et outil web incapable d'ouvrir le site. GitHub indique cependant une exécution « pages build and deployment » réussie pour `114f16b`, [exécution 42104872538](https://github.com/markup99/code-secret-couleurs/actions/runs/42104872538).
+
+**Diagnostic observé localement :** les fichiers frais de `main` comptent correctement cette combinaison de 0 à 4. Un contrôle Chromium instrumenté enregistre les événements `input` et `change` pour chacune des quatre sélections. Le décompte compte les positions, pas les couleurs distinctes ; le jaune répété n'est donc pas la cause dans cette exécution. La suite existante avant correction donne également 62 réussites sur 62.
+
+Une reproduction locale sert le HTML actuel avec le véritable ancien `js/ui.js` extrait du commit `2e04659` : les quatre valeurs et les pions colorés correspondent à `[jaune, vert, jaune, orange]`, les événements sont bien émis, mais le compteur reste à `0/4` à chaque étape. Ce module ancien ne contient aucun traitement du compteur ; le texte initial du nouveau HTML reste donc inchangé. Les URL de `app.js` et de son import `ui.js` étaient identiques avant et après l'ajout du compteur, permettant de réutiliser une ancienne réponse mise en cache. **Ce mélange de versions reproduit exactement le symptôme ; son occurrence dans le navigateur de l'utilisateur reste une hypothèse, pas une observation de son cache.** Aucun défaut du gestionnaire `change` ou du calcul du compteur n'a été reproduit avec les fichiers frais.
+
+**Correction minimale :** `index.html` charge désormais `./js/app.js?v=selection-counter-1`, et `js/app.js` importe `./ui.js?v=selection-counter-1`. Les deux URL doivent changer : un ancien `app.js` conserverait son import non versionné de `ui.js`. Cette révision distingue les modules actuels des anciennes URL ; lors d'une prochaine modification de ces modules, il faudra actualiser cette révision. Le moteur, `js/ui.js`, le calcul du compteur, les événements, les sélections et l'API restent inchangés. Le HTML lui-même doit être actualisé côté navigateur pour demander ces nouvelles URL.
+
+Résultats attendus fixés avant les contrôles, puis résultats réellement obtenus avec Chromium headless :
+
+| Contrôle | Attendu | Observé |
+| --- | --- | --- |
+| Fichiers frais de main, avant correction, sélection jaune / vert / jaune / orange | 0/4 → 1/4 → 2/4 → 3/4 → 4/4 | Conforme ; bug non reproduit dans cette situation |
+| HTML actuel + ancien ui.js non versionné, avant correction | 4/4 après les quatre sélections | Échec reproduit : 0/4 à chaque étape, malgré valeurs/pions corrects et événements input/change émis |
+| Même serveur offrant l'ancien ui.js à son URL non versionnée, après correction | Les nouveaux modules sont chargés ; 0/4 → 1/4 → 2/4 → 3/4 → 4/4 | Conforme |
+| Nouveau test simulant des réponses obsolètes aux anciennes URL app.js/ui.js | Aucune ancienne URL exécutée ; partie jouable et compteur à jour | Échec avant correction (démarrage impossible), réussite après correction |
+| Combinaison signalée dans ce nouveau test, en mode normal sans API exposée | 0/4 → 1/4 → 2/4 → 3/4 → 4/4, jaune répété compté deux fois | Conforme |
+| Remplacer la première sélection par bleu | Reste à 4/4 | Conforme |
+| Vider puis remplir la dernière position | 3/4 puis 4/4 | Conforme |
+| Soumettre une proposition valide | 0/4, quatre sélecteurs vides, une entrée d'historique | Conforme |
+| Sélectionner une couleur puis cliquer sur Nouvelle partie | 1/4 puis 0/4, historique vide | Conforme |
+| Contrôles existants : refus, démarrages API, victoire, clavier et affichage responsive | Sélections conservées sur refus, remise à zéro sur succès/redémarrage, autres comportements préservés | 62 tests existants réussis |
+
+Vérification après correction : `npm test` donne **48 réussites, 0 échec, 0 ignoré** ; `CHROMIUM_PATH=/usr/bin/chromium npm run test:api` donne **63 réussites, 0 échec, 0 ignoré** (62 tests existants + un test de régression). Le test ajouté à `tests/api.test.js` intercepte les anciennes URL pour modéliser des modules obsolètes ; il ne prétend pas observer un véritable cache distant. `node --check js/app.js`, `node --check tests/api.test.js` et `git diff --check` réussissent. Versions utilisées : Node.js 24.19.0, Playwright 1.64.1, Chromium 154.0.8037.57.
+
+Fichiers modifiés pour cette correction : `index.html`, `js/app.js`, `tests/api.test.js` et `README.md`. Non vérifiés : cause exacte dans la session publiée de l'utilisateur, comportement après déploiement de la correction, autres navigateurs et appareils réels. Aucun commit, publication ou fusion réalisé pour cette correction.

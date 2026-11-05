@@ -1,5 +1,5 @@
 import { createGame } from "./engine.js";
-import { createUI } from "./ui.js";
+import { createUI } from "./ui.js?v=selection-counter-1";
 
 // Player actions and API calls share this engine and the UI's rendering path.
 const game = createGame();
