@@ -46,8 +46,9 @@ export function createUI(game) {
   }
 
   function render(state) {
-    fields.disabled = busy || state.status !== "playing";
-    restart.disabled = busy;
+    // Rendering completes an operation: controls must be ready before return.
+    fields.disabled = state.status !== "playing";
+    restart.disabled = false;
     remaining.textContent = `${config.maxAttempts - state.attempts} / ${config.maxAttempts} essais restants`;
     emptyHistory.hidden = state.history.length > 0;
     history.replaceChildren();
@@ -73,10 +74,9 @@ export function createUI(game) {
 
     message.dataset.kind = state.lastError ? "error" : state.status;
     if (state.lastError) {
-      const incomplete = selects.some((select) => select.value === "");
-      message.textContent = incomplete && state.status === "playing"
-        ? "Proposition incomplète : choisissez les quatre couleurs. Aucun essai consommé."
-        : state.lastError.message;
+      message.textContent = state.lastError.message;
+    } else if (state.status === "not-started") {
+      message.textContent = "Cliquez sur Nouvelle partie pour commencer.";
     } else if (state.status === "won") {
       message.textContent = `Bravo ! Vous avez trouvé le code secret en ${state.attempts} essai(s).`;
     } else if (state.status === "lost") {
@@ -88,28 +88,24 @@ export function createUI(game) {
     }
   }
 
-  async function startGame() {
-    if (busy) return;
-    busy = true;
-    fields.disabled = true;
-    restart.disabled = true;
-    try {
-      await game.startGame();
-      form.reset();
-      for (const select of selects) {
-        select.removeAttribute("aria-invalid");
-        select.dispatchEvent(new Event("change"));
-      }
-    } catch {
-      message.textContent = "Impossible de démarrer la partie. Cliquez sur Nouvelle partie pour réessayer.";
-      message.dataset.kind = "error";
-      return;
-    } finally {
-      busy = false;
-      restart.disabled = false;
+  async function startGame(options) {
+    // Validate in the engine first. A rejected start must leave the DOM,
+    // selections, focus and previous lastError completely untouched.
+    const state = await game.startGame(options);
+    form.reset();
+    for (const select of selects) {
+      select.removeAttribute("aria-invalid");
+      select.dispatchEvent(new Event("change"));
     }
-    render(game.getState());
+    render(state);
     selects[0].focus();
+    return state;
+  }
+
+  async function submitGuess(guess) {
+    const state = await game.submitGuess(guess);
+    render(state);
+    return state;
   }
 
   form.addEventListener("submit", async (event) => {
@@ -119,11 +115,13 @@ export function createUI(game) {
     fields.disabled = true;
     restart.disabled = true;
     try {
-      const state = await game.submitGuess(selects.map((select) => select.value));
+      const state = await submitGuess(selects.map((select) => select.value));
       busy = false;
-      render(state);
       if (state.lastError) {
         const firstEmpty = selects.find((select) => select.value === "");
+        if (firstEmpty) {
+          message.textContent = "Proposition incomplète : choisissez les quatre couleurs. Aucun essai consommé.";
+        }
         for (const select of selects) {
           if (select.value === "") select.setAttribute("aria-invalid", "true");
         }
@@ -133,7 +131,8 @@ export function createUI(game) {
       } else {
         selects[0].focus();
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       message.textContent = "Impossible de valider la proposition. Veuillez réessayer.";
       message.dataset.kind = "error";
     } finally {
@@ -142,7 +141,23 @@ export function createUI(game) {
       restart.disabled = false;
     }
   });
-  restart.addEventListener("click", startGame);
+  restart.addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    try {
+      // Do not pass the click event as startGame options.
+      await startGame();
+    } catch (error) {
+      console.error(error);
+      message.textContent = "Impossible de démarrer la partie. Cliquez sur Nouvelle partie pour réessayer.";
+      message.dataset.kind = "error";
+    } finally {
+      busy = false;
+      fields.disabled = game.getState().status !== "playing";
+      restart.disabled = false;
+    }
+  });
 
-  return { startGame };
+  render(game.getState());
+  return { startGame, submitGuess };
 }
