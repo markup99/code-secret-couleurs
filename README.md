@@ -175,3 +175,22 @@ Commandes et résultats de cette modification, avec Node.js 24.19.0, Playwright 
 Fichiers modifiés : `index.html` (compteur visible), `js/ui.js` (décompte et remise à zéro), `tests/api.test.js` (quatre tests de comportement), `README.md` (instructions de jeu et preuves de vérification). Aucun changement de CSS, du moteur, de `js/app.js`, du contrat ou des dépendances.
 
 Non vérifiés pour ce compteur : lecteur d'écran réel et annonces vocales, Firefox/Safari, appareils physiques et outil enseignant. Aucun commit, publication ou fusion effectué pour cette modification ; elle reste à relire.
+
+## Vérification manuelle sur GitHub Pages : compteur
+
+Les mentions précédentes de tests GitHub Pages non exécutés et de modification en attente de fusion décrivent l'état au moment des vérifications locales. Depuis, la PR nº 5 (compteur et tests associés) a été fusionnée dans `main` au commit `114f16b3e93c260e2e3e0d4bac9c40f029996961`. Ce commit est la dernière version de `main` consultée pour cette mise à jour documentaire. Le commit `2e04659f0c8f9c2b42c2a8b0a6bf61352423efa7` cité plus haut reste la base historique du travail sur le compteur.
+
+Les observations ci-dessous proviennent des tests manuels effectués par l'utilisateur sur le site GitHub Pages publié : <https://markup99.github.io/code-secret-couleurs/>. Elles n'ont pas été reproduites par Codex lors de cette mise à jour. Le SHA exact des fichiers servis et chargés dans chacune des sessions n'a pas été établi ; le commit de référence du dépôt ne constitue donc pas une preuve de la version exécutée dans le navigateur.
+
+| Situation vérifiée manuellement | Résultat attendu | Résultat observé rapporté |
+| --- | --- | --- |
+| Quatre couleurs sélectionnées | Compteur à `4/4` | `4/4`, conforme |
+| Soumission d'une proposition valide | Compteur remis à `0/4` | `0/4`, conforme |
+| Même séquence dans une nouvelle fenêtre de navigation privée Chrome | `4/4` après sélection, puis `0/4` après soumission valide | Même comportement conforme |
+| Session de navigateur antérieure, avec quatre couleurs sélectionnées | Compteur à `4/4` | `0/4`, écart constaté |
+
+La cause de l'écart dans la session antérieure reste **non confirmée**. Un ancien fichier JavaScript conservé en cache est une hypothèse possible, sans preuve permettant de la retenir. Le succès en navigation privée ne suffit pas à établir cette cause ni une disparition définitive du problème. Les changements de code proposés concernant le cache **n'ont pas été fusionnés** ; aucune correction de cet écart ne leur est attribuée.
+
+Limites : cette vérification manuelle porte uniquement sur le compteur et sa remise à zéro dans les situations rapportées. Elle ne valide pas l'ensemble du jeu ou de l'API sur GitHub Pages. La date exacte des essais, la version de Chrome et la version des ressources chargées ne sont pas renseignées. Les autres vérifications encore ouvertes restent celles documentées ci-dessus : Firefox/Safari, appareils physiques, accessibilité manuelle et lecteur d'écran, outil enseignant et essais sur deux architectures. Les spécifications PDF et le modèle du cours ne sont pas disponibles dans cet espace de travail ; aucune nouvelle vérification de conformité à ces documents n'est revendiquée.
+
+Cette mise à jour modifie uniquement `README.md`. Le contenu et le diff documentaire sont vérifiés ; aucun nouveau test du jeu n'est exécuté, et les résultats automatisés précédents restent des résultats historiques. Cette mise à jour documentaire ne modifie pas le site publié ; sa fusion dans `main` reste soumise à relecture.
